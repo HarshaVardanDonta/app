@@ -3,27 +3,58 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/
 import { Badge } from './ui/badge';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
-import { MOCK_BANKS } from '../mock/data';
-import { Building2, DollarSign, Search, TrendingUp, Coins, ExternalLink } from 'lucide-react';
+import { useBlockchainData } from '../hooks/useBlockchainData';
+import { Building2, DollarSign, Search, TrendingUp, Coins, ExternalLink, Loader2, AlertCircle, RefreshCw } from 'lucide-react';
 
 const BankList = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedBank, setSelectedBank] = useState(null);
+  const { banks, loading, error, refresh } = useBlockchainData();
 
-  const filteredBanks = MOCK_BANKS.filter(bank =>
+  const filteredBanks = banks.filter(bank =>
     bank.bankName.toLowerCase().includes(searchTerm.toLowerCase()) ||
     bank.currencyName.toLowerCase().includes(searchTerm.toLowerCase()) ||
     bank.currencySymbol.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   const formatNumber = (num) => {
-    if (num >= 1000000) {
-      return (num / 1000000).toFixed(1) + 'M';
-    } else if (num >= 1000) {
-      return (num / 1000).toFixed(1) + 'K';
+    const numVal = parseInt(num || 0);
+    if (numVal >= 1000000) {
+      return (numVal / 1000000).toFixed(1) + 'M';
+    } else if (numVal >= 1000) {
+      return (numVal / 1000).toFixed(1) + 'K';
     }
-    return num.toLocaleString();
+    return numVal.toLocaleString();
   };
+
+  if (loading && banks.length === 0) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <div className="flex items-center space-x-2">
+          <Loader2 className="w-6 h-6 animate-spin" />
+          <span>Loading banks from blockchain...</span>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[400px] space-y-4">
+        <div className="flex items-center space-x-2 text-red-600">
+          <AlertCircle className="w-6 h-6" />
+          <span>Failed to load banks</span>
+        </div>
+        <p className="text-sm text-gray-600 text-center max-w-md">
+          {error}
+        </p>
+        <Button onClick={refresh} variant="outline">
+          <RefreshCw className="w-4 h-4 mr-2" />
+          Retry
+        </Button>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -34,17 +65,24 @@ const BankList = () => {
           <p className="text-gray-600 mt-2">Browse all registered banking institutions</p>
         </div>
         
-        {/* Search */}
-        <div className="relative w-full md:w-96">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
-          <Input
-            type="text"
-            placeholder="Search banks, currencies..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="pl-10"
-          />
+        <div className="flex items-center space-x-2">
+          <Button onClick={refresh} variant="ghost" size="sm">
+            <RefreshCw className="w-4 h-4 mr-1" />
+            Refresh
+          </Button>
         </div>
+      </div>
+
+      {/* Search */}
+      <div className="relative w-full md:w-96">
+        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+        <Input
+          type="text"
+          placeholder="Search banks, currencies..."
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
+          className="pl-10"
+        />
       </div>
 
       {/* Results Count */}
@@ -90,7 +128,7 @@ const BankList = () => {
                     <span className="text-sm font-medium text-gray-700">Exchange Rate</span>
                   </div>
                   <span className="font-bold text-gray-900">
-                    ${bank.currencyValue.toFixed(4)}
+                    ${parseFloat(bank.currencyValue || 0).toFixed(4)}
                   </span>
                 </div>
 
@@ -122,6 +160,18 @@ const BankList = () => {
                   <span className="font-mono text-gray-800">{bank.uniqueId}</span>
                 </div>
 
+                {/* Balances */}
+                <div className="grid grid-cols-2 gap-2 text-xs">
+                  <div className="text-center p-2 bg-indigo-50 rounded">
+                    <div className="text-indigo-600 font-medium">Normal Balance</div>
+                    <div className="text-indigo-900 font-bold">{formatNumber(bank.normalCurrencyBalance)}</div>
+                  </div>
+                  <div className="text-center p-2 bg-purple-50 rounded">
+                    <div className="text-purple-600 font-medium">Foreign Balance</div>
+                    <div className="text-purple-900 font-bold">{formatNumber(bank.foreignCurrencyBalance)}</div>
+                  </div>
+                </div>
+
                 {/* Action Button */}
                 <Button
                   variant="outline"
@@ -138,20 +188,27 @@ const BankList = () => {
       </div>
 
       {/* Empty State */}
-      {filteredBanks.length === 0 && (
+      {filteredBanks.length === 0 && banks.length > 0 && (
         <div className="text-center py-12">
           <Building2 className="w-16 h-16 text-gray-400 mx-auto mb-4" />
           <h3 className="text-lg font-medium text-gray-900 mb-2">No banks found</h3>
           <p className="text-gray-600">
-            {searchTerm 
-              ? `No banks match "${searchTerm}". Try a different search term.`
-              : 'No banks have been registered yet.'
-            }
+            No banks match "{searchTerm}". Try a different search term.
           </p>
         </div>
       )}
 
-      {/* Bank Detail Modal (placeholder) */}
+      {banks.length === 0 && !loading && (
+        <div className="text-center py-12">
+          <Building2 className="w-16 h-16 text-gray-400 mx-auto mb-4" />
+          <h3 className="text-lg font-medium text-gray-900 mb-2">No banks registered yet</h3>
+          <p className="text-gray-600">
+            Be the first to request a new bank creation!
+          </p>
+        </div>
+      )}
+
+      {/* Bank Detail Modal */}
       {selectedBank && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
           <Card className="max-w-2xl w-full max-h-[90vh] overflow-y-auto">
@@ -179,7 +236,7 @@ const BankList = () => {
                   <div>
                     <label className="text-sm font-medium text-gray-600">Exchange Rate</label>
                     <p className="text-lg font-semibold text-gray-900">
-                      ${selectedBank.currencyValue.toFixed(6)}
+                      ${parseFloat(selectedBank.currencyValue || 0).toFixed(6)}
                     </p>
                   </div>
                 </div>
@@ -188,20 +245,35 @@ const BankList = () => {
                   <div>
                     <label className="text-sm font-medium text-gray-600">Total Minted</label>
                     <p className="text-lg font-semibold text-gray-900">
-                      {selectedBank.mintedSupply.toLocaleString()}
+                      {parseInt(selectedBank.mintedSupply || 0).toLocaleString()}
                     </p>
                   </div>
                   <div>
                     <label className="text-sm font-medium text-gray-600">Available Supply</label>
                     <p className="text-lg font-semibold text-gray-900">
-                      {selectedBank.availableSupply.toLocaleString()}
+                      {parseInt(selectedBank.availableSupply || 0).toLocaleString()}
+                    </p>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="text-sm font-medium text-gray-600">Normal Balance</label>
+                    <p className="text-lg font-semibold text-gray-900">
+                      {parseInt(selectedBank.normalCurrencyBalance || 0).toLocaleString()}
+                    </p>
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium text-gray-600">Foreign Balance</label>
+                    <p className="text-lg font-semibold text-gray-900">
+                      {parseInt(selectedBank.foreignCurrencyBalance || 0).toLocaleString()}
                     </p>
                   </div>
                 </div>
 
                 <div>
                   <label className="text-sm font-medium text-gray-600">Bank Address</label>
-                  <p className="text-sm font-mono bg-gray-100 p-2 rounded mt-1">
+                  <p className="text-sm font-mono bg-gray-100 p-2 rounded mt-1 break-all">
                     {selectedBank.bankAddress}
                   </p>
                 </div>
@@ -210,6 +282,13 @@ const BankList = () => {
                   <label className="text-sm font-medium text-gray-600">Bank ID</label>
                   <p className="text-sm font-mono bg-gray-100 p-2 rounded mt-1">
                     {selectedBank.uniqueId}
+                  </p>
+                </div>
+
+                <div>
+                  <label className="text-sm font-medium text-gray-600">Created By</label>
+                  <p className="text-sm font-mono bg-gray-100 p-2 rounded mt-1 break-all">
+                    {selectedBank.createdBy}
                   </p>
                 </div>
               </div>

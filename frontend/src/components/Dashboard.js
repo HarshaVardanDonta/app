@@ -3,17 +3,64 @@ import { useWallet } from '../contexts/WalletContext';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/card';
 import { Badge } from './ui/badge';
 import BankRequestForm from './BankRequestForm';
-import { MOCK_BANKS, MOCK_PENDING_REQUESTS, MOCK_TRANSFER_HISTORY } from '../mock/data';
-import { Building2, DollarSign, ArrowRightLeft, TrendingUp, Crown, Users } from 'lucide-react';
+import { useBlockchainData } from '../hooks/useBlockchainData';
+import { Building2, DollarSign, ArrowRightLeft, TrendingUp, Crown, Users, Loader2, AlertCircle, RefreshCw } from 'lucide-react';
+import { Button } from './ui/button';
 
 const Dashboard = () => {
-  const { isOwner } = useWallet();
+  const { isOwner, account } = useWallet();
+  const { banks, pendingRequests, transferHistory, loading, error, refresh } = useBlockchainData();
 
   // Calculate stats
-  const totalBanks = MOCK_BANKS.length;
-  const pendingRequests = MOCK_PENDING_REQUESTS.length;
-  const totalTransfers = MOCK_TRANSFER_HISTORY.length;
-  const totalMintedSupply = MOCK_BANKS.reduce((sum, bank) => sum + bank.mintedSupply, 0);
+  const totalBanks = banks.length;
+  const pendingRequestsCount = pendingRequests.length;
+  const totalTransfers = transferHistory.length;
+  const totalMintedSupply = banks.reduce((sum, bank) => sum + parseInt(bank.mintedSupply || 0), 0);
+
+  const formatNumber = (num) => {
+    if (num >= 1000000) {
+      return (num / 1000000).toFixed(1) + 'M';
+    } else if (num >= 1000) {
+      return (num / 1000).toFixed(1) + 'K';
+    }
+    return num.toLocaleString();
+  };
+
+  const handleRequestSuccess = () => {
+    // Refresh data after successful request
+    setTimeout(() => {
+      refresh();
+    }, 2000);
+  };
+
+  if (loading && banks.length === 0) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <div className="flex items-center space-x-2">
+          <Loader2 className="w-6 h-6 animate-spin" />
+          <span>Loading blockchain data...</span>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[400px] space-y-4">
+        <div className="flex items-center space-x-2 text-red-600">
+          <AlertCircle className="w-6 h-6" />
+          <span>Failed to load blockchain data</span>
+        </div>
+        <p className="text-sm text-gray-600 text-center max-w-md">
+          {error}
+        </p>
+        <Button onClick={refresh} variant="outline">
+          <RefreshCw className="w-4 h-4 mr-2" />
+          Retry
+        </Button>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-8">
@@ -28,6 +75,13 @@ const Dashboard = () => {
             : 'View banks, submit requests, and manage your banking activities'
           }
         </p>
+        <div className="flex items-center justify-center space-x-4 text-sm text-gray-500">
+          <span>Connected: {account?.slice(0, 6)}...{account?.slice(-4)}</span>
+          <Button onClick={refresh} variant="ghost" size="sm">
+            <RefreshCw className="w-4 h-4 mr-1" />
+            Refresh
+          </Button>
+        </div>
       </div>
 
       {/* Stats Cards */}
@@ -54,7 +108,7 @@ const Dashboard = () => {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-gray-900">
-              {(totalMintedSupply / 1000000).toFixed(1)}M
+              {formatNumber(totalMintedSupply)}
             </div>
             <p className="text-xs text-gray-500 mt-1">Minted coins</p>
           </CardContent>
@@ -81,7 +135,7 @@ const Dashboard = () => {
             {isOwner ? <Crown className="h-4 w-4 text-orange-500" /> : <Users className="h-4 w-4 text-orange-500" />}
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-gray-900">{pendingRequests}</div>
+            <div className="text-2xl font-bold text-gray-900">{pendingRequestsCount}</div>
             <p className="text-xs text-gray-500 mt-1">
               {isOwner ? 'Awaiting approval' : 'Under review'}
             </p>
@@ -102,7 +156,7 @@ const Dashboard = () => {
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
-              {MOCK_BANKS.slice(0, 3).map((bank) => (
+              {banks.slice(0, 3).map((bank) => (
                 <div key={bank.uniqueId} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
                   <div>
                     <h4 className="font-medium text-gray-900">{bank.bankName}</h4>
@@ -113,11 +167,17 @@ const Dashboard = () => {
                       Active
                     </Badge>
                     <p className="text-xs text-gray-500 mt-1">
-                      {(bank.mintedSupply / 1000000).toFixed(1)}M minted
+                      {formatNumber(parseInt(bank.mintedSupply || 0))} minted
                     </p>
                   </div>
                 </div>
               ))}
+              {banks.length === 0 && (
+                <div className="text-center py-8 text-gray-500">
+                  <Building2 className="w-12 h-12 mx-auto mb-4 text-gray-400" />
+                  <p>No banks registered yet</p>
+                </div>
+              )}
             </div>
           </CardContent>
         </Card>
@@ -133,14 +193,14 @@ const Dashboard = () => {
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
-              {MOCK_TRANSFER_HISTORY.slice(0, 3).map((transfer) => (
+              {transferHistory.slice(0, 3).map((transfer) => (
                 <div key={transfer.transferId} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
                   <div>
                     <h4 className="font-medium text-gray-900">
                       {transfer.fromBankId} → {transfer.toBankId}
                     </h4>
                     <p className="text-sm text-gray-600">
-                      {transfer.amount.toLocaleString()} {transfer.currencyName}
+                      {parseInt(transfer.amount).toLocaleString()} {transfer.currencyName}
                     </p>
                   </div>
                   <div className="text-right">
@@ -153,6 +213,12 @@ const Dashboard = () => {
                   </div>
                 </div>
               ))}
+              {transferHistory.length === 0 && (
+                <div className="text-center py-8 text-gray-500">
+                  <ArrowRightLeft className="w-12 h-12 mx-auto mb-4 text-gray-400" />
+                  <p>No transfers yet</p>
+                </div>
+              )}
             </div>
           </CardContent>
         </Card>
@@ -162,7 +228,7 @@ const Dashboard = () => {
       {!isOwner && (
         <div>
           <h2 className="text-2xl font-bold text-gray-900 mb-6">Request New Bank</h2>
-          <BankRequestForm />
+          <BankRequestForm onSuccess={handleRequestSuccess} />
         </div>
       )}
 
@@ -181,7 +247,7 @@ const Dashboard = () => {
               <div className="p-4 border rounded-lg hover:bg-gray-50 cursor-pointer transition-colors">
                 <h4 className="font-medium text-gray-900 mb-2">Pending Requests</h4>
                 <p className="text-sm text-gray-600 mb-3">Review and approve bank creation requests</p>
-                <Badge variant="outline">{pendingRequests} pending</Badge>
+                <Badge variant="outline">{pendingRequestsCount} pending</Badge>
               </div>
               <div className="p-4 border rounded-lg hover:bg-gray-50 cursor-pointer transition-colors">
                 <h4 className="font-medium text-gray-900 mb-2">Mint Coins</h4>
