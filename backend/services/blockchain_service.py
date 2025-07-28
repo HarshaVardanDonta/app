@@ -1,6 +1,6 @@
 from typing import List, Dict, Any
 from web3 import Web3
-from web3.exceptions import BlockchainError, TransactionNotFound
+from web3.exceptions import TransactionNotFound
 import logging
 
 from config.web3_config import get_web3, get_contract, CONTRACT_ADDRESS
