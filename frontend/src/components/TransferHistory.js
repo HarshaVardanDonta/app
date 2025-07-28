@@ -4,18 +4,19 @@ import { Badge } from './ui/badge';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
-import { MOCK_TRANSFER_HISTORY, MOCK_PENDING_TRANSFERS } from '../mock/data';
-import { ArrowRightLeft, Search, Filter, Clock, CheckCircle, XCircle, Calendar } from 'lucide-react';
+import { useBlockchainData } from '../hooks/useBlockchainData';
+import { ArrowRightLeft, Search, Filter, Clock, CheckCircle, XCircle, Calendar, Loader2, AlertCircle, RefreshCw } from 'lucide-react';
 
 const TransferHistory = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [selectedTransfer, setSelectedTransfer] = useState(null);
+  const { transferHistory, pendingTransfers, loading, error, refresh } = useBlockchainData();
 
   // Combine pending and completed transfers
   const allTransfers = [
-    ...MOCK_PENDING_TRANSFERS.map(t => ({ ...t, status: 'pending' })),
-    ...MOCK_TRANSFER_HISTORY.map(t => ({ ...t, status: 'completed' }))
+    ...pendingTransfers.map(t => ({ ...t, status: 'pending' })),
+    ...transferHistory.map(t => ({ ...t, status: 'completed' }))
   ].sort((a, b) => b.timestamp - a.timestamp);
 
   const filteredTransfers = allTransfers.filter(transfer => {
@@ -31,7 +32,7 @@ const TransferHistory = () => {
   });
 
   const formatAmount = (amount) => {
-    return amount.toLocaleString();
+    return parseInt(amount || 0).toLocaleString();
   };
 
   const formatDate = (timestamp) => {
@@ -64,6 +65,35 @@ const TransferHistory = () => {
     }
   };
 
+  if (loading && allTransfers.length === 0) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <div className="flex items-center space-x-2">
+          <Loader2 className="w-6 h-6 animate-spin" />
+          <span>Loading transfer history from blockchain...</span>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[400px] space-y-4">
+        <div className="flex items-center space-x-2 text-red-600">
+          <AlertCircle className="w-6 h-6" />
+          <span>Failed to load transfer history</span>
+        </div>
+        <p className="text-sm text-gray-600 text-center max-w-md">
+          {error}
+        </p>
+        <Button onClick={refresh} variant="outline">
+          <RefreshCw className="w-4 h-4 mr-2" />
+          Retry
+        </Button>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -71,6 +101,13 @@ const TransferHistory = () => {
         <div>
           <h1 className="text-3xl font-bold text-gray-900">Transfer History</h1>
           <p className="text-gray-600 mt-2">Track all inter-bank transfers and their status</p>
+        </div>
+        
+        <div className="flex items-center space-x-2">
+          <Button onClick={refresh} variant="ghost" size="sm">
+            <RefreshCw className="w-4 h-4 mr-1" />
+            Refresh
+          </Button>
         </div>
       </div>
 
@@ -204,15 +241,22 @@ const TransferHistory = () => {
       </div>
 
       {/* Empty State */}
-      {filteredTransfers.length === 0 && (
+      {filteredTransfers.length === 0 && allTransfers.length > 0 && (
         <div className="text-center py-12">
           <ArrowRightLeft className="w-16 h-16 text-gray-400 mx-auto mb-4" />
           <h3 className="text-lg font-medium text-gray-900 mb-2">No transfers found</h3>
           <p className="text-gray-600">
-            {searchTerm || statusFilter !== 'all'
-              ? 'No transfers match your current filters.'
-              : 'No transfers have been initiated yet.'
-            }
+            No transfers match your current filters.
+          </p>
+        </div>
+      )}
+
+      {allTransfers.length === 0 && !loading && (
+        <div className="text-center py-12">
+          <ArrowRightLeft className="w-16 h-16 text-gray-400 mx-auto mb-4" />
+          <h3 className="text-lg font-medium text-gray-900 mb-2">No transfers yet</h3>
+          <p className="text-gray-600">
+            No transfers have been initiated yet.
           </p>
         </div>
       )}
@@ -266,7 +310,7 @@ const TransferHistory = () => {
 
                 <div>
                   <label className="text-sm font-medium text-gray-600">Transfer ID</label>
-                  <p className="text-sm font-mono bg-gray-100 p-2 rounded mt-1">
+                  <p className="text-sm font-mono bg-gray-100 p-2 rounded mt-1 break-all">
                     {selectedTransfer.transferId}
                   </p>
                 </div>
@@ -275,6 +319,13 @@ const TransferHistory = () => {
                   <label className="text-sm font-medium text-gray-600">Timestamp</label>
                   <p className="text-sm bg-gray-100 p-2 rounded mt-1">
                     {formatDate(selectedTransfer.timestamp)}
+                  </p>
+                </div>
+
+                <div>
+                  <label className="text-sm font-medium text-gray-600">Approved</label>
+                  <p className="text-sm bg-gray-100 p-2 rounded mt-1">
+                    {selectedTransfer.approved ? 'Yes' : 'No'}
                   </p>
                 </div>
               </div>

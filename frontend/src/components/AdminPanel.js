@@ -6,13 +6,8 @@ import { Input } from './ui/input';
 import { Label } from './ui/label';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from './ui/tabs';
 import { useToast } from '../hooks/use-toast';
-import { 
-  MOCK_PENDING_REQUESTS, 
-  MOCK_PENDING_TRANSFERS, 
-  MOCK_BANKS,
-  mockApproveBank,
-  mockMintCoins
-} from '../mock/data';
+import { useWallet } from '../contexts/WalletContext';
+import { useBlockchainData } from '../hooks/useBlockchainData';
 import { 
   Crown, 
   Building2, 
@@ -21,28 +16,43 @@ import {
   Coins,
   ArrowRightLeft, 
   Clock,
-  Loader2
+  Loader2,
+  AlertCircle,
+  RefreshCw
 } from 'lucide-react';
 
 const AdminPanel = () => {
   const [isLoading, setIsLoading] = useState({});
   const [mintAmount, setMintAmount] = useState({});
+  const { web3Service } = useWallet();
+  const { banks, pendingRequests, pendingTransfers, loading, error, refresh } = useBlockchainData();
   const { toast } = useToast();
 
   const handleApproveBank = async (bankId) => {
     setIsLoading(prev => ({ ...prev, [bankId]: true }));
     try {
-      const result = await mockApproveBank(bankId);
-      if (result.success) {
-        toast({
-          title: "Bank Approved",
-          description: `Bank ${bankId} has been approved successfully. Transaction: ${result.transactionHash}`,
-        });
-      }
-    } catch (error) {
+      const tx = await web3Service.generateBank(bankId);
       toast({
-        title: "Error",
-        description: "Failed to approve bank. Please try again.",
+        title: "Bank Approved",
+        description: `Bank ${bankId} has been approved successfully. Transaction: ${tx.hash}`,
+      });
+      // Refresh data after successful transaction
+      setTimeout(() => {
+        refresh();
+      }, 3000);
+    } catch (error) {
+      console.error('Failed to approve bank:', error);
+      let errorMessage = 'Failed to approve bank. Please try again.';
+      
+      if (error.message.includes('user rejected')) {
+        errorMessage = 'Transaction was rejected by user';
+      } else if (error.message.includes('insufficient funds')) {
+        errorMessage = 'Insufficient ETH for gas fees';
+      }
+      
+      toast({
+        title: "Transaction Failed",
+        description: errorMessage,
         variant: "destructive"
       });
     } finally {
@@ -63,18 +73,29 @@ const AdminPanel = () => {
 
     setIsLoading(prev => ({ ...prev, [`mint_${bankId}`]: true }));
     try {
-      const result = await mockMintCoins(bankId, parseInt(amount));
-      if (result.success) {
-        toast({
-          title: "Coins Minted",
-          description: `${amount} coins have been minted for ${bankId}. Transaction: ${result.transactionHash}`,
-        });
-        setMintAmount(prev => ({ ...prev, [bankId]: '' }));
-      }
-    } catch (error) {
+      const tx = await web3Service.mintCoins(bankId, parseInt(amount));
       toast({
-        title: "Error",
-        description: "Failed to mint coins. Please try again.",
+        title: "Coins Minted",
+        description: `${amount} coins have been minted for ${bankId}. Transaction: ${tx.hash}`,
+      });
+      setMintAmount(prev => ({ ...prev, [bankId]: '' }));
+      // Refresh data after successful transaction
+      setTimeout(() => {
+        refresh();
+      }, 3000);
+    } catch (error) {
+      console.error('Failed to mint coins:', error);
+      let errorMessage = 'Failed to mint coins. Please try again.';
+      
+      if (error.message.includes('user rejected')) {
+        errorMessage = 'Transaction was rejected by user';
+      } else if (error.message.includes('insufficient funds')) {
+        errorMessage = 'Insufficient ETH for gas fees';
+      }
+      
+      toast({
+        title: "Transaction Failed",
+        description: errorMessage,
         variant: "destructive"
       });
     } finally {
@@ -82,46 +103,89 @@ const AdminPanel = () => {
     }
   };
 
-  const handleApproveTransfer = async (transferId) => {
-    setIsLoading(prev => ({ ...prev, [`transfer_${transferId}`]: true }));
+  const handleApproveTransfer = async (transfer) => {
+    setIsLoading(prev => ({ ...prev, [`transfer_${transfer.transferId}`]: true }));
     try {
-      // Mock approval logic
-      await new Promise(resolve => setTimeout(resolve, 2000));
+      const tx = await web3Service.approveBankTransfer(transfer.toBankId, transfer.transferId);
       toast({
         title: "Transfer Approved",
-        description: `Transfer ${transferId} has been approved successfully.`,
+        description: `Transfer ${transfer.transferId} has been approved successfully. Transaction: ${tx.hash}`,
       });
+      // Refresh data after successful transaction
+      setTimeout(() => {
+        refresh();
+      }, 3000);
     } catch (error) {
+      console.error('Failed to approve transfer:', error);
+      let errorMessage = 'Failed to approve transfer. Please try again.';
+      
+      if (error.message.includes('user rejected')) {
+        errorMessage = 'Transaction was rejected by user';
+      }
+      
       toast({
-        title: "Error",
-        description: "Failed to approve transfer. Please try again.",
+        title: "Transaction Failed",
+        description: errorMessage,
         variant: "destructive"
       });
     } finally {
-      setIsLoading(prev => ({ ...prev, [`transfer_${transferId}`]: false }));
+      setIsLoading(prev => ({ ...prev, [`transfer_${transfer.transferId}`]: false }));
     }
   };
 
-  const handleRejectTransfer = async (transferId) => {
-    setIsLoading(prev => ({ ...prev, [`reject_${transferId}`]: true }));
+  const handleRejectTransfer = async (transfer) => {
+    setIsLoading(prev => ({ ...prev, [`reject_${transfer.transferId}`]: true }));
     try {
-      // Mock rejection logic
-      await new Promise(resolve => setTimeout(resolve, 1500));
+      const tx = await web3Service.rejectBankTransfer(transfer.toBankId, transfer.transferId);
       toast({
         title: "Transfer Rejected",
-        description: `Transfer ${transferId} has been rejected.`,
+        description: `Transfer ${transfer.transferId} has been rejected. Transaction: ${tx.hash}`,
         variant: "destructive"
       });
+      // Refresh data after successful transaction
+      setTimeout(() => {
+        refresh();
+      }, 3000);
     } catch (error) {
+      console.error('Failed to reject transfer:', error);
       toast({
-        title: "Error",
+        title: "Transaction Failed",
         description: "Failed to reject transfer. Please try again.",
         variant: "destructive"
       });
     } finally {
-      setIsLoading(prev => ({ ...prev, [`reject_${transferId}`]: false }));
+      setIsLoading(prev => ({ ...prev, [`reject_${transfer.transferId}`]: false }));
     }
   };
+
+  if (loading && banks.length === 0) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <div className="flex items-center space-x-2">
+          <Loader2 className="w-6 h-6 animate-spin" />
+          <span>Loading admin data from blockchain...</span>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[400px] space-y-4">
+        <div className="flex items-center space-x-2 text-red-600">
+          <AlertCircle className="w-6 h-6" />
+          <span>Failed to load admin data</span>
+        </div>
+        <p className="text-sm text-gray-600 text-center max-w-md">
+          {error}
+        </p>
+        <Button onClick={refresh} variant="outline">
+          <RefreshCw className="w-4 h-4 mr-2" />
+          Retry
+        </Button>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -134,6 +198,12 @@ const AdminPanel = () => {
         <p className="text-lg text-gray-600">
           Manage banks, approve requests, and oversee the banking system
         </p>
+        <div className="flex items-center justify-center space-x-4">
+          <Button onClick={refresh} variant="ghost" size="sm">
+            <RefreshCw className="w-4 h-4 mr-1" />
+            Refresh
+          </Button>
+        </div>
       </div>
 
       {/* Stats Overview */}
@@ -143,7 +213,7 @@ const AdminPanel = () => {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm text-gray-600">Pending Requests</p>
-                <p className="text-2xl font-bold text-orange-700">{MOCK_PENDING_REQUESTS.length}</p>
+                <p className="text-2xl font-bold text-orange-700">{pendingRequests.length}</p>
               </div>
               <Clock className="w-8 h-8 text-orange-500" />
             </div>
@@ -155,7 +225,7 @@ const AdminPanel = () => {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm text-gray-600">Active Banks</p>
-                <p className="text-2xl font-bold text-blue-700">{MOCK_BANKS.length}</p>
+                <p className="text-2xl font-bold text-blue-700">{banks.length}</p>
               </div>
               <Building2 className="w-8 h-8 text-blue-500" />
             </div>
@@ -167,7 +237,7 @@ const AdminPanel = () => {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm text-gray-600">Pending Transfers</p>
-                <p className="text-2xl font-bold text-purple-700">{MOCK_PENDING_TRANSFERS.length}</p>
+                <p className="text-2xl font-bold text-purple-700">{pendingTransfers.length}</p>
               </div>
               <ArrowRightLeft className="w-8 h-8 text-purple-500" />
             </div>
@@ -180,7 +250,7 @@ const AdminPanel = () => {
               <div>
                 <p className="text-sm text-gray-600">Total Supply</p>
                 <p className="text-2xl font-bold text-green-700">
-                  {(MOCK_BANKS.reduce((sum, bank) => sum + bank.mintedSupply, 0) / 1000000).toFixed(1)}M
+                  {(banks.reduce((sum, bank) => sum + parseInt(bank.mintedSupply || 0), 0) / 1000000).toFixed(1)}M
                 </p>
               </div>
               <Coins className="w-8 h-8 text-green-500" />
@@ -211,7 +281,7 @@ const AdminPanel = () => {
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
-                {MOCK_PENDING_REQUESTS.map((request) => (
+                {pendingRequests.map((request) => (
                   <div key={request.generatedId} className="border rounded-lg p-4">
                     <div className="flex items-center justify-between">
                       <div className="space-y-2">
@@ -219,7 +289,7 @@ const AdminPanel = () => {
                         <div className="flex items-center space-x-4 text-sm text-gray-600">
                           <Badge variant="outline">{request.currencySymbol}</Badge>
                           <span>{request.currencyName}</span>
-                          <span>Rate: ${request.currencyValue}</span>
+                          <span>Rate: ${parseFloat(request.currencyValue).toFixed(4)}</span>
                         </div>
                         <p className="text-xs text-gray-500">
                           Submitted by: {request.submittedBy}
@@ -242,19 +312,11 @@ const AdminPanel = () => {
                           )}
                           Approve
                         </Button>
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          className="border-red-200 text-red-600 hover:bg-red-50"
-                        >
-                          <XCircle className="w-4 h-4 mr-1" />
-                          Reject
-                        </Button>
                       </div>
                     </div>
                   </div>
                 ))}
-                {MOCK_PENDING_REQUESTS.length === 0 && (
+                {pendingRequests.length === 0 && (
                   <div className="text-center py-8 text-gray-500">
                     <Building2 className="w-12 h-12 mx-auto mb-4 text-gray-400" />
                     <p>No pending bank requests</p>
@@ -279,7 +341,7 @@ const AdminPanel = () => {
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
-                {MOCK_BANKS.map((bank) => (
+                {banks.map((bank) => (
                   <div key={bank.uniqueId} className="border rounded-lg p-4">
                     <div className="flex items-center justify-between">
                       <div className="space-y-2">
@@ -287,11 +349,11 @@ const AdminPanel = () => {
                         <div className="grid grid-cols-3 gap-4 text-sm">
                           <div>
                             <span className="text-gray-600">Current Supply:</span>
-                            <p className="font-medium">{bank.mintedSupply.toLocaleString()}</p>
+                            <p className="font-medium">{parseInt(bank.mintedSupply || 0).toLocaleString()}</p>
                           </div>
                           <div>
                             <span className="text-gray-600">Available:</span>
-                            <p className="font-medium">{bank.availableSupply.toLocaleString()}</p>
+                            <p className="font-medium">{parseInt(bank.availableSupply || 0).toLocaleString()}</p>
                           </div>
                           <div>
                             <span className="text-gray-600">Currency:</span>
@@ -307,12 +369,14 @@ const AdminPanel = () => {
                           <Input
                             id={`mint-${bank.uniqueId}`}
                             type="number"
+                            min="1"
                             placeholder="0"
                             value={mintAmount[bank.uniqueId] || ''}
                             onChange={(e) => setMintAmount(prev => ({
                               ...prev,
                               [bank.uniqueId]: e.target.value
                             }))}
+                            disabled={isLoading[`mint_${bank.uniqueId}`]}
                             className="w-32"
                           />
                         </div>
@@ -332,6 +396,12 @@ const AdminPanel = () => {
                     </div>
                   </div>
                 ))}
+                {banks.length === 0 && (
+                  <div className="text-center py-8 text-gray-500">
+                    <Building2 className="w-12 h-12 mx-auto mb-4 text-gray-400" />
+                    <p>No approved banks available for minting</p>
+                  </div>
+                )}
               </div>
             </CardContent>
           </Card>
@@ -351,7 +421,7 @@ const AdminPanel = () => {
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
-                {MOCK_PENDING_TRANSFERS.map((transfer) => (
+                {pendingTransfers.map((transfer) => (
                   <div key={transfer.transferId} className="border rounded-lg p-4">
                     <div className="flex items-center justify-between">
                       <div className="space-y-2">
@@ -359,17 +429,17 @@ const AdminPanel = () => {
                           {transfer.fromBankId} → {transfer.toBankId}
                         </h3>
                         <div className="flex items-center space-x-4 text-sm text-gray-600">
-                          <span>Amount: {transfer.amount.toLocaleString()} {transfer.currencyName}</span>
+                          <span>Amount: {parseInt(transfer.amount).toLocaleString()} {transfer.currencyName}</span>
                           <span>Date: {new Date(transfer.timestamp).toLocaleDateString()}</span>
                         </div>
-                        <p className="text-xs text-gray-500 font-mono">
+                        <p className="text-xs text-gray-500 font-mono break-all">
                           {transfer.transferId}
                         </p>
                       </div>
                       <div className="flex items-center space-x-2">
                         <Button
                           size="sm"
-                          onClick={() => handleApproveTransfer(transfer.transferId)}
+                          onClick={() => handleApproveTransfer(transfer)}
                           disabled={isLoading[`transfer_${transfer.transferId}`]}
                           className="bg-green-600 hover:bg-green-700"
                         >
@@ -383,7 +453,7 @@ const AdminPanel = () => {
                         <Button
                           size="sm"
                           variant="outline"
-                          onClick={() => handleRejectTransfer(transfer.transferId)}
+                          onClick={() => handleRejectTransfer(transfer)}
                           disabled={isLoading[`reject_${transfer.transferId}`]}
                           className="border-red-200 text-red-600 hover:bg-red-50"
                         >
@@ -398,7 +468,7 @@ const AdminPanel = () => {
                     </div>
                   </div>
                 ))}
-                {MOCK_PENDING_TRANSFERS.length === 0 && (
+                {pendingTransfers.length === 0 && (
                   <div className="text-center py-8 text-gray-500">
                     <ArrowRightLeft className="w-12 h-12 mx-auto mb-4 text-gray-400" />
                     <p>No pending transfers</p>
