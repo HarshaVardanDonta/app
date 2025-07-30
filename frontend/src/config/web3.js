@@ -762,9 +762,10 @@ export const getProvider = () => {
 };
 
 // Get contract instance
-export const getContract = (provider, withSigner = false) => {
+export const getContract = async (provider, withSigner = false) => {
   if (withSigner && provider.getSigner) {
-    return new ethers.Contract(CONTRACT_ADDRESS, CONTRACT_ABI, provider.getSigner());
+    const signer = await provider.getSigner();
+    return new ethers.Contract(CONTRACT_ADDRESS, CONTRACT_ABI, signer);
   }
   return new ethers.Contract(CONTRACT_ADDRESS, CONTRACT_ABI, provider);
 };

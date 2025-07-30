@@ -9,6 +9,7 @@ from pydantic import BaseModel, Field
 from typing import List, Dict, Any, Optional
 import uuid
 from datetime import datetime
+from contextlib import asynccontextmanager
 
 # Import blockchain service
 from services.blockchain_service import blockchain_service
@@ -21,8 +22,15 @@ mongo_url = os.environ['MONGO_URL']
 client = AsyncIOMotorClient(mongo_url)
 db = client[os.environ['DB_NAME']]
 
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    # Startup
+    yield
+    # Shutdown
+    client.close()
+
 # Create the main app without a prefix
-app = FastAPI(title="Bank Manager API", description="API for managing blockchain banks")
+app = FastAPI(title="Bank Manager API", description="API for managing blockchain banks", lifespan=lifespan)
 
 # Create a router with the /api prefix
 api_router = APIRouter(prefix="/api")
@@ -259,7 +267,3 @@ logging.basicConfig(
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
 )
 logger = logging.getLogger(__name__)
-
-@app.on_event("shutdown")
-async def shutdown_db_client():
-    client.close()

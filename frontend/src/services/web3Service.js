@@ -31,7 +31,7 @@ class Web3Service {
 
       this.provider = getProvider();
       this.signer = await this.provider.getSigner();
-      
+
       // Check if we're on the correct network
       const network = await this.provider.getNetwork();
       if (network.chainId !== BigInt('11155111')) { // Sepolia chain ID
@@ -39,7 +39,7 @@ class Web3Service {
       }
 
       // Get contract instance with signer
-      this.contract = getContract(this.provider, true);
+      this.contract = await getContract(this.provider, true);
 
       return {
         address: accounts[0],
@@ -107,7 +107,7 @@ class Web3Service {
     if (!this.contract) {
       throw new Error('Contract not initialized');
     }
-    
+
     try {
       const requests = await this.contract.getPendingRequests();
       return requests.map(request => ({
@@ -133,7 +133,7 @@ class Web3Service {
     try {
       const bankIds = [];
       let index = 0;
-      
+
       while (true) {
         try {
           const bankId = await this.contract.bankIds(index);
@@ -148,7 +148,7 @@ class Web3Service {
           break;
         }
       }
-      
+
       return bankIds;
     } catch (error) {
       console.error('Failed to get bank IDs:', error);
@@ -186,12 +186,12 @@ class Web3Service {
     try {
       const bankIds = await this.getBankIds();
       const banks = [];
-      
+
       for (const bankId of bankIds) {
         const bankDetails = await this.getBankDetails(bankId);
         banks.push(bankDetails);
       }
-      
+
       return banks;
     } catch (error) {
       console.error('Failed to get all banks:', error);
@@ -253,14 +253,14 @@ class Web3Service {
     try {
       // Convert currency value to wei (assuming it's a decimal)
       const valueInWei = ethers.parseUnits(currencyValue.toString(), 0);
-      
+
       const tx = await this.contract.requestBank(
         bankName,
         currencyName,
         currencySymbol,
         valueInWei
       );
-      
+
       await tx.wait();
       return tx;
     } catch (error) {

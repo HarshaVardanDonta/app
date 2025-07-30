@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useWallet } from '../contexts/WalletContext';
 import axios from 'axios';
 
-const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
+const BACKEND_URL = process.env.REACT_APP_BACKEND_URL || 'http://localhost:8001';
 const API = `${BACKEND_URL}/api`;
 
 // Custom hook for fetching blockchain data

@@ -2,7 +2,7 @@ import React, { createContext, useContext, useState, useEffect } from 'react';
 import web3Service from '../services/web3Service';
 import axios from 'axios';
 
-const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
+const BACKEND_URL = process.env.REACT_APP_BACKEND_URL || 'http://localhost:8001';
 const API = `${BACKEND_URL}/api`;
 
 const WalletContext = createContext();
@@ -43,16 +43,16 @@ export const WalletProvider = ({ children }) => {
 
       const connection = await web3Service.connectWallet();
       const ownerStatus = await checkOwnership(connection.address);
-      
+
       setAccount(connection.address);
       setIsOwner(ownerStatus);
       setIsConnected(true);
-      
+
       // Store in localStorage for persistence
       localStorage.setItem('walletConnected', 'true');
       localStorage.setItem('walletAddress', connection.address);
       localStorage.setItem('isOwner', ownerStatus.toString());
-      
+
       return connection;
     } catch (error) {
       console.error('Failed to connect wallet:', error);
@@ -69,7 +69,7 @@ export const WalletProvider = ({ children }) => {
     localStorage.removeItem('walletConnected');
     localStorage.removeItem('walletAddress');
     localStorage.removeItem('isOwner');
-    
+
     // Remove listeners
     web3Service.removeAllListeners();
   };
@@ -88,7 +88,7 @@ export const WalletProvider = ({ children }) => {
   useEffect(() => {
     const wasConnected = localStorage.getItem('walletConnected');
     const savedAddress = localStorage.getItem('walletAddress');
-    
+
     if (wasConnected && savedAddress && web3Service.isMetaMaskInstalled()) {
       // Auto-reconnect
       connectWallet().catch((error) => {
@@ -96,7 +96,7 @@ export const WalletProvider = ({ children }) => {
         disconnectWallet();
       });
     }
-    
+
     // Fetch contract owner on mount
     fetchContractOwner();
   }, []);
