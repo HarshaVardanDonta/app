@@ -4,14 +4,25 @@ import { Badge } from './ui/badge';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from './ui/tabs';
 import { useBlockchainData } from '../hooks/useBlockchainData';
-import { ArrowRightLeft, Search, Filter, Clock, CheckCircle, XCircle, Calendar, Loader2, AlertCircle, RefreshCw } from 'lucide-react';
+import { useWallet } from '../contexts/WalletContext';
+import TransferRequestForm from './TransferRequestForm';
+import { ArrowRightLeft, Search, Filter, Clock, CheckCircle, XCircle, Calendar, Loader2, AlertCircle, RefreshCw, Plus } from 'lucide-react';
 
 const TransferHistory = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [selectedTransfer, setSelectedTransfer] = useState(null);
   const { transferHistory, pendingTransfers, loading, error, refresh } = useBlockchainData();
+  const { isOwner } = useWallet();
+
+  const handleTransferSuccess = () => {
+    // Refresh data after successful transfer request
+    setTimeout(() => {
+      refresh();
+    }, 2000);
+  };
 
   // Combine pending and completed transfers
   const allTransfers = [
@@ -20,14 +31,14 @@ const TransferHistory = () => {
   ].sort((a, b) => b.timestamp - a.timestamp);
 
   const filteredTransfers = allTransfers.filter(transfer => {
-    const matchesSearch = 
+    const matchesSearch =
       transfer.fromBankId.toLowerCase().includes(searchTerm.toLowerCase()) ||
       transfer.toBankId.toLowerCase().includes(searchTerm.toLowerCase()) ||
       transfer.currencyName.toLowerCase().includes(searchTerm.toLowerCase()) ||
       transfer.transferId.toLowerCase().includes(searchTerm.toLowerCase());
-    
+
     const matchesStatus = statusFilter === 'all' || transfer.status === statusFilter;
-    
+
     return matchesSearch && matchesStatus;
   });
 
@@ -99,10 +110,10 @@ const TransferHistory = () => {
       {/* Header */}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center space-y-4 md:space-y-0">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">Transfer History</h1>
-          <p className="text-gray-600 mt-2">Track all inter-bank transfers and their status</p>
+          <h1 className="text-3xl font-bold text-gray-900">Transfer Management</h1>
+          <p className="text-gray-600 mt-2">Track transfers and request new bank-to-bank transfers</p>
         </div>
-        
+
         <div className="flex items-center space-x-2">
           <Button onClick={refresh} variant="ghost" size="sm">
             <RefreshCw className="w-4 h-4 mr-1" />
@@ -111,155 +122,174 @@ const TransferHistory = () => {
         </div>
       </div>
 
-      {/* Filters */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center space-x-2">
-            <Filter className="w-5 h-5 text-gray-600" />
-            <span>Filters</span>
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="flex flex-col md:flex-row space-y-4 md:space-y-0 md:space-x-4">
-            {/* Search */}
-            <div className="relative flex-1">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
-              <Input
-                type="text"
-                placeholder="Search transfers, banks, currencies..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-10"
-              />
-            </div>
-            
-            {/* Status Filter */}
-            <Select value={statusFilter} onValueChange={setStatusFilter}>
-              <SelectTrigger className="w-full md:w-48">
-                <SelectValue placeholder="Filter by status" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Transfers</SelectItem>
-                <SelectItem value="pending">Pending</SelectItem>
-                <SelectItem value="completed">Completed</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-        </CardContent>
-      </Card>
+      {/* Tabs for Transfer History and New Request */}
+      <Tabs defaultValue="history" className="w-full">
+        <TabsList className="grid w-full grid-cols-2">
+          <TabsTrigger value="history">Transfer History</TabsTrigger>
+          <TabsTrigger value="request">
+            <Plus className="w-4 h-4 mr-1" />
+            New Transfer
+          </TabsTrigger>
+        </TabsList>
 
-      {/* Stats Overview */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <Card className="border-l-4 border-l-green-500">
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-gray-600">Completed</p>
-                <p className="text-2xl font-bold text-green-700">
-                  {allTransfers.filter(t => t.status === 'completed').length}
-                </p>
-              </div>
-              <CheckCircle className="w-8 h-8 text-green-500" />
-            </div>
-          </CardContent>
-        </Card>
-        
-        <Card className="border-l-4 border-l-yellow-500">
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-gray-600">Pending</p>
-                <p className="text-2xl font-bold text-yellow-700">
-                  {allTransfers.filter(t => t.status === 'pending').length}
-                </p>
-              </div>
-              <Clock className="w-8 h-8 text-yellow-500" />
-            </div>
-          </CardContent>
-        </Card>
-        
-        <Card className="border-l-4 border-l-blue-500">
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-gray-600">Total</p>
-                <p className="text-2xl font-bold text-blue-700">{allTransfers.length}</p>
-              </div>
-              <ArrowRightLeft className="w-8 h-8 text-blue-500" />
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Results Count */}
-      <div className="flex items-center justify-between">
-        <p className="text-sm text-gray-600">
-          {filteredTransfers.length} transfer{filteredTransfers.length !== 1 ? 's' : ''} found
-        </p>
-      </div>
-
-      {/* Transfer List */}
-      <div className="space-y-4">
-        {filteredTransfers.map((transfer) => (
-          <Card key={transfer.transferId} className="hover:shadow-md transition-shadow">
-            <CardContent className="p-6">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center space-x-4">
-                  <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
-                    <ArrowRightLeft className="w-6 h-6 text-blue-600" />
-                  </div>
-                  <div>
-                    <h3 className="font-semibold text-gray-900">
-                      {transfer.fromBankId} → {transfer.toBankId}
-                    </h3>
-                    <p className="text-sm text-gray-600">
-                      {formatAmount(transfer.amount)} {transfer.currencyName}
-                    </p>
-                    <div className="flex items-center space-x-2 mt-1">
-                      <Calendar className="w-3 h-3 text-gray-400" />
-                      <span className="text-xs text-gray-500">
-                        {formatDate(transfer.timestamp)}
-                      </span>
-                    </div>
-                  </div>
+        {/* Transfer History Tab */}
+        <TabsContent value="history" className="space-y-6">
+          {/* Filters */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center space-x-2">
+                <Filter className="w-5 h-5 text-gray-600" />
+                <span>Filters</span>
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="flex flex-col md:flex-row space-y-4 md:space-y-0 md:space-x-4">
+                {/* Search */}
+                <div className="relative flex-1">
+                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+                  <Input
+                    type="text"
+                    placeholder="Search transfers, banks, currencies..."
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    className="pl-10"
+                  />
                 </div>
-                
-                <div className="flex items-center space-x-4">
-                  {getStatusBadge(transfer.status)}
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setSelectedTransfer(transfer)}
-                  >
-                    View Details
-                  </Button>
-                </div>
+
+                {/* Status Filter */}
+                <Select value={statusFilter} onValueChange={setStatusFilter}>
+                  <SelectTrigger className="w-full md:w-48">
+                    <SelectValue placeholder="Filter by status" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Transfers</SelectItem>
+                    <SelectItem value="pending">Pending</SelectItem>
+                    <SelectItem value="completed">Completed</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
             </CardContent>
           </Card>
-        ))}
-      </div>
 
-      {/* Empty State */}
-      {filteredTransfers.length === 0 && allTransfers.length > 0 && (
-        <div className="text-center py-12">
-          <ArrowRightLeft className="w-16 h-16 text-gray-400 mx-auto mb-4" />
-          <h3 className="text-lg font-medium text-gray-900 mb-2">No transfers found</h3>
-          <p className="text-gray-600">
-            No transfers match your current filters.
-          </p>
-        </div>
-      )}
+          {/* Stats Overview */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <Card className="border-l-4 border-l-green-500">
+              <CardContent className="p-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm text-gray-600">Completed</p>
+                    <p className="text-2xl font-bold text-green-700">
+                      {allTransfers.filter(t => t.status === 'completed').length}
+                    </p>
+                  </div>
+                  <CheckCircle className="w-8 h-8 text-green-500" />
+                </div>
+              </CardContent>
+            </Card>
 
-      {allTransfers.length === 0 && !loading && (
-        <div className="text-center py-12">
-          <ArrowRightLeft className="w-16 h-16 text-gray-400 mx-auto mb-4" />
-          <h3 className="text-lg font-medium text-gray-900 mb-2">No transfers yet</h3>
-          <p className="text-gray-600">
-            No transfers have been initiated yet.
-          </p>
-        </div>
-      )}
+            <Card className="border-l-4 border-l-yellow-500">
+              <CardContent className="p-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm text-gray-600">Pending</p>
+                    <p className="text-2xl font-bold text-yellow-700">
+                      {allTransfers.filter(t => t.status === 'pending').length}
+                    </p>
+                  </div>
+                  <Clock className="w-8 h-8 text-yellow-500" />
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card className="border-l-4 border-l-blue-500">
+              <CardContent className="p-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm text-gray-600">Total</p>
+                    <p className="text-2xl font-bold text-blue-700">{allTransfers.length}</p>
+                  </div>
+                  <ArrowRightLeft className="w-8 h-8 text-blue-500" />
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Results Count */}
+          <div className="flex items-center justify-between">
+            <p className="text-sm text-gray-600">
+              {filteredTransfers.length} transfer{filteredTransfers.length !== 1 ? 's' : ''} found
+            </p>
+          </div>
+
+          {/* Transfer List */}
+          <div className="space-y-4">
+            {filteredTransfers.map((transfer) => (
+              <Card key={transfer.transferId} className="hover:shadow-md transition-shadow">
+                <CardContent className="p-6">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center space-x-4">
+                      <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
+                        <ArrowRightLeft className="w-6 h-6 text-blue-600" />
+                      </div>
+                      <div>
+                        <h3 className="font-semibold text-gray-900">
+                          {transfer.fromBankId} → {transfer.toBankId}
+                        </h3>
+                        <p className="text-sm text-gray-600">
+                          {formatAmount(transfer.amount)} {transfer.currencyName}
+                        </p>
+                        <div className="flex items-center space-x-2 mt-1">
+                          <Calendar className="w-3 h-3 text-gray-400" />
+                          <span className="text-xs text-gray-500">
+                            {formatDate(transfer.timestamp)}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center space-x-4">
+                      {getStatusBadge(transfer.status)}
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setSelectedTransfer(transfer)}
+                      >
+                        View Details
+                      </Button>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+
+          {/* Empty State */}
+          {filteredTransfers.length === 0 && allTransfers.length > 0 && (
+            <div className="text-center py-12">
+              <ArrowRightLeft className="w-16 h-16 text-gray-400 mx-auto mb-4" />
+              <h3 className="text-lg font-medium text-gray-900 mb-2">No transfers found</h3>
+              <p className="text-gray-600">
+                No transfers match your current filters.
+              </p>
+            </div>
+          )}
+
+          {allTransfers.length === 0 && !loading && (
+            <div className="text-center py-12">
+              <ArrowRightLeft className="w-16 h-16 text-gray-400 mx-auto mb-4" />
+              <h3 className="text-lg font-medium text-gray-900 mb-2">No transfers yet</h3>
+              <p className="text-gray-600">
+                No transfers have been initiated yet.
+              </p>
+            </div>
+          )}
+        </TabsContent>
+
+        {/* New Transfer Request Tab */}
+        <TabsContent value="request" className="space-y-6">
+          <TransferRequestForm onSuccess={handleTransferSuccess} />
+        </TabsContent>
+      </Tabs>
 
       {/* Transfer Detail Modal */}
       {selectedTransfer && (
@@ -268,8 +298,8 @@ const TransferHistory = () => {
             <CardHeader>
               <div className="flex items-center justify-between">
                 <CardTitle className="text-xl">Transfer Details</CardTitle>
-                <Button 
-                  variant="ghost" 
+                <Button
+                  variant="ghost"
                   size="sm"
                   onClick={() => setSelectedTransfer(null)}
                 >
@@ -283,7 +313,7 @@ const TransferHistory = () => {
                   <span className="font-medium text-gray-700">Status</span>
                   {getStatusBadge(selectedTransfer.status)}
                 </div>
-                
+
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <label className="text-sm font-medium text-gray-600">From Bank</label>
@@ -294,7 +324,7 @@ const TransferHistory = () => {
                     <p className="text-lg font-semibold text-gray-900">{selectedTransfer.toBankId}</p>
                   </div>
                 </div>
-                
+
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <label className="text-sm font-medium text-gray-600">Amount</label>

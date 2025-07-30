@@ -70,7 +70,7 @@ const Dashboard = () => {
           {isOwner ? 'Admin Dashboard' : 'Bank Manager Dashboard'}
         </h1>
         <p className="text-lg text-gray-600">
-          {isOwner 
+          {isOwner
             ? 'Manage banks, approve requests, and oversee the entire banking system'
             : 'View banks, submit requests, and manage your banking activities'
           }

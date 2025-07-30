@@ -27,6 +27,7 @@ export const WalletProvider = ({ children }) => {
       const response = await axios.post(`${API}/contract/check-ownership`, {
         address: address
       });
+      console.log('Ownership check response:', response.data);
       return response.data.isOwner;
     } catch (error) {
       console.error('Failed to check ownership:', error);

@@ -1,4 +1,5 @@
 import React from 'react';
+import { Link, useLocation } from 'react-router-dom';
 import { useWallet } from '../contexts/WalletContext';
 import { Button } from './ui/button';
 import { Badge } from './ui/badge';
@@ -6,10 +7,15 @@ import { Wallet, Crown, LogOut } from 'lucide-react';
 
 const Navbar = () => {
   const { account, isOwner, isConnected, isConnecting, connectWallet, disconnectWallet } = useWallet();
+  const location = useLocation();
 
   const formatAddress = (address) => {
     if (!address) return '';
     return `${address.slice(0, 6)}...${address.slice(-4)}`;
+  };
+
+  const isActive = (path) => {
+    return location.pathname === path;
   };
 
   return (
@@ -29,19 +35,43 @@ const Navbar = () => {
           {/* Navigation Links */}
           <div className="hidden md:block">
             <div className="ml-10 flex items-baseline space-x-4">
-              <a href="#dashboard" className="text-gray-700 hover:text-blue-600 px-3 py-2 rounded-md text-sm font-medium transition-colors">
+              <Link
+                to="/"
+                className={`px-3 py-2 rounded-md text-sm font-medium transition-colors ${isActive('/')
+                    ? 'text-blue-600 bg-blue-50 border-b-2 border-blue-600'
+                    : 'text-gray-700 hover:text-blue-600'
+                  }`}
+              >
                 Dashboard
-              </a>
-              <a href="#banks" className="text-gray-700 hover:text-blue-600 px-3 py-2 rounded-md text-sm font-medium transition-colors">
+              </Link>
+              <Link
+                to="/banks"
+                className={`px-3 py-2 rounded-md text-sm font-medium transition-colors ${isActive('/banks')
+                    ? 'text-blue-600 bg-blue-50 border-b-2 border-blue-600'
+                    : 'text-gray-700 hover:text-blue-600'
+                  }`}
+              >
                 Banks
-              </a>
-              <a href="#transfers" className="text-gray-700 hover:text-blue-600 px-3 py-2 rounded-md text-sm font-medium transition-colors">
+              </Link>
+              <Link
+                to="/transfers"
+                className={`px-3 py-2 rounded-md text-sm font-medium transition-colors ${isActive('/transfers')
+                    ? 'text-blue-600 bg-blue-50 border-b-2 border-blue-600'
+                    : 'text-gray-700 hover:text-blue-600'
+                  }`}
+              >
                 Transfers
-              </a>
+              </Link>
               {isOwner && (
-                <a href="#admin" className="text-gray-700 hover:text-blue-600 px-3 py-2 rounded-md text-sm font-medium transition-colors">
+                <Link
+                  to="/admin"
+                  className={`px-3 py-2 rounded-md text-sm font-medium transition-colors ${isActive('/admin')
+                      ? 'text-blue-600 bg-blue-50 border-b-2 border-blue-600'
+                      : 'text-gray-700 hover:text-blue-600'
+                    }`}
+                >
                   Admin
-                </a>
+                </Link>
               )}
             </div>
           </div>
