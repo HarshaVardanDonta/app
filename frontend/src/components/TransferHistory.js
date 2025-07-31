@@ -14,7 +14,7 @@ const TransferHistory = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [selectedTransfer, setSelectedTransfer] = useState(null);
-  const { transferHistory, pendingTransfers, loading, error, refresh } = useBlockchainData();
+  const { transferHistory, pendingTransfers, banks, loading, error, refresh } = useBlockchainData();
   const { isOwner } = useWallet();
 
   const handleTransferSuccess = () => {
@@ -22,6 +22,17 @@ const TransferHistory = () => {
     setTimeout(() => {
       refresh();
     }, 2000);
+  };
+
+  // Helper function to get bank details by ID
+  const getBankDetails = (bankId) => {
+    return banks.find(bank => bank.uniqueId === bankId);
+  };
+
+  // Helper function to format address for display
+  const formatAddress = (address) => {
+    if (!address) return 'N/A';
+    return `${address.slice(0, 6)}...${address.slice(-4)}`;
   };
 
   // Combine pending and completed transfers, avoiding duplicates
@@ -244,44 +255,67 @@ const TransferHistory = () => {
 
           {/* Transfer List */}
           <div className="space-y-4">
-            {filteredTransfers.map((transfer) => (
-              <Card key={transfer.transferId} className="hover:shadow-md transition-shadow">
-                <CardContent className="p-6">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center space-x-4">
-                      <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
-                        <ArrowRightLeft className="w-6 h-6 text-blue-600" />
-                      </div>
-                      <div>
-                        <h3 className="font-semibold text-gray-900">
-                          {transfer.fromBankId} → {transfer.toBankId}
-                        </h3>
-                        <p className="text-sm text-gray-600">
-                          {formatAmount(transfer.amount)} {transfer.currencyName}
-                        </p>
-                        <div className="flex items-center space-x-2 mt-1">
-                          <Calendar className="w-3 h-3 text-gray-400" />
-                          <span className="text-xs text-gray-500">
-                            {formatDate(transfer.timestamp)}
-                          </span>
+            {filteredTransfers.map((transfer) => {
+              const fromBank = getBankDetails(transfer.fromBankId);
+              const toBank = getBankDetails(transfer.toBankId);
+
+              return (
+                <Card key={transfer.transferId} className="hover:shadow-md transition-shadow">
+                  <CardContent className="p-6">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center space-x-4">
+                        <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
+                          <ArrowRightLeft className="w-6 h-6 text-blue-600" />
+                        </div>
+                        <div>
+                          <h3 className="font-semibold text-gray-900">
+                            {transfer.fromBankId} → {transfer.toBankId}
+                          </h3>
+                          <p className="text-sm text-gray-600">
+                            {formatAmount(transfer.amount)} {transfer.currencyName}
+                          </p>
+                          <div className="flex items-center space-x-4 mt-1">
+                            <div className="flex items-center space-x-2">
+                              <Calendar className="w-3 h-3 text-gray-400" />
+                              <span className="text-xs text-gray-500">
+                                {formatDate(transfer.timestamp)}
+                              </span>
+                            </div>
+                            {fromBank && (
+                              <div className="flex items-center space-x-1">
+                                <span className="text-xs text-gray-400">From:</span>
+                                <span className="text-xs text-gray-600 font-mono">
+                                  {formatAddress(fromBank.bankAddress)}
+                                </span>
+                              </div>
+                            )}
+                            {toBank && (
+                              <div className="flex items-center space-x-1">
+                                <span className="text-xs text-gray-400">To:</span>
+                                <span className="text-xs text-gray-600 font-mono">
+                                  {formatAddress(toBank.bankAddress)}
+                                </span>
+                              </div>
+                            )}
+                          </div>
                         </div>
                       </div>
-                    </div>
 
-                    <div className="flex items-center space-x-4">
-                      {getStatusBadge(transfer.status)}
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => setSelectedTransfer(transfer)}
-                      >
-                        View Details
-                      </Button>
+                      <div className="flex items-center space-x-4">
+                        {getStatusBadge(transfer.status)}
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => setSelectedTransfer(transfer)}
+                        >
+                          View Details
+                        </Button>
+                      </div>
                     </div>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
+                  </CardContent>
+                </Card>
+              );
+            })}
           </div>
 
           {/* Empty State */}
@@ -339,10 +373,56 @@ const TransferHistory = () => {
                   <div>
                     <label className="text-sm font-medium text-gray-600">From Bank</label>
                     <p className="text-lg font-semibold text-gray-900">{selectedTransfer.fromBankId}</p>
+                    {(() => {
+                      const fromBank = getBankDetails(selectedTransfer.fromBankId);
+                      return fromBank ? (
+                        <div className="mt-2 space-y-1">
+                          <div>
+                            <span className="text-xs text-gray-500">Bank Name:</span>
+                            <p className="text-sm text-gray-700">{fromBank.bankName}</p>
+                          </div>
+                          <div>
+                            <span className="text-xs text-gray-500">Bank Address:</span>
+                            <p className="text-xs font-mono bg-gray-100 p-1 rounded break-all">
+                              {fromBank.bankAddress}
+                            </p>
+                          </div>
+                          <div>
+                            <span className="text-xs text-gray-500">Created By:</span>
+                            <p className="text-xs font-mono bg-gray-100 p-1 rounded break-all">
+                              {fromBank.createdBy}
+                            </p>
+                          </div>
+                        </div>
+                      ) : null;
+                    })()}
                   </div>
                   <div>
                     <label className="text-sm font-medium text-gray-600">To Bank</label>
                     <p className="text-lg font-semibold text-gray-900">{selectedTransfer.toBankId}</p>
+                    {(() => {
+                      const toBank = getBankDetails(selectedTransfer.toBankId);
+                      return toBank ? (
+                        <div className="mt-2 space-y-1">
+                          <div>
+                            <span className="text-xs text-gray-500">Bank Name:</span>
+                            <p className="text-sm text-gray-700">{toBank.bankName}</p>
+                          </div>
+                          <div>
+                            <span className="text-xs text-gray-500">Bank Address:</span>
+                            <p className="text-xs font-mono bg-gray-100 p-1 rounded break-all">
+                              {toBank.bankAddress}
+                            </p>
+                          </div>
+                          <div>
+                            <span className="text-xs text-gray-500">Created By:</span>
+                            <p className="text-xs font-mono bg-gray-100 p-1 rounded break-all">
+                              {toBank.createdBy}
+                            </p>
+                          </div>
+                        </div>
+                      ) : null;
+                    })()}
                   </div>
                 </div>
 
