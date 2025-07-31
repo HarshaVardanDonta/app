@@ -276,7 +276,21 @@ class Web3Service {
 
     try {
       const tx = await this.contract.generateBank(bankId);
-      await tx.wait();
+
+      // Try to wait for the transaction, but handle rate limiting gracefully
+      try {
+        await tx.wait();
+      } catch (waitError) {
+        // If we get rate limiting error while waiting, don't fail the whole operation
+        if (waitError.message?.includes('rate limit') ||
+          waitError.code === -32005 ||
+          waitError.message?.includes('could not coalesce error')) {
+          console.warn('Rate limiting while waiting for transaction, but transaction was submitted:', tx.hash);
+        } else {
+          throw waitError;
+        }
+      }
+
       return tx;
     } catch (error) {
       console.error('Failed to generate bank:', error);
@@ -292,7 +306,21 @@ class Web3Service {
     try {
       const amountInWei = ethers.parseUnits(amount.toString(), 0);
       const tx = await this.contract.mintCoins(bankId, amountInWei);
-      await tx.wait();
+
+      // Try to wait for the transaction, but handle rate limiting gracefully
+      try {
+        await tx.wait();
+      } catch (waitError) {
+        // If we get rate limiting error while waiting, don't fail the whole operation
+        if (waitError.message?.includes('rate limit') ||
+          waitError.code === -32005 ||
+          waitError.message?.includes('could not coalesce error')) {
+          console.warn('Rate limiting while waiting for transaction, but transaction was submitted:', tx.hash);
+        } else {
+          throw waitError;
+        }
+      }
+
       return tx;
     } catch (error) {
       console.error('Failed to mint coins:', error);
@@ -323,7 +351,21 @@ class Web3Service {
 
     try {
       const tx = await this.contract.approveBankToBankTransfer(bankId, transferId);
-      await tx.wait();
+
+      // Try to wait for the transaction, but handle rate limiting gracefully
+      try {
+        await tx.wait();
+      } catch (waitError) {
+        // If we get rate limiting error while waiting, don't fail the whole operation
+        if (waitError.message?.includes('rate limit') ||
+          waitError.code === -32005 ||
+          waitError.message?.includes('could not coalesce error')) {
+          console.warn('Rate limiting while waiting for transaction, but transaction was submitted:', tx.hash);
+        } else {
+          throw waitError;
+        }
+      }
+
       return tx;
     } catch (error) {
       console.error('Failed to approve bank transfer:', error);
@@ -338,7 +380,21 @@ class Web3Service {
 
     try {
       const tx = await this.contract.rejectBankToBankTransfer(bankId, transferId);
-      await tx.wait();
+
+      // Try to wait for the transaction, but handle rate limiting gracefully
+      try {
+        await tx.wait();
+      } catch (waitError) {
+        // If we get rate limiting error while waiting, don't fail the whole operation
+        if (waitError.message?.includes('rate limit') ||
+          waitError.code === -32005 ||
+          waitError.message?.includes('could not coalesce error')) {
+          console.warn('Rate limiting while waiting for transaction, but transaction was submitted:', tx.hash);
+        } else {
+          throw waitError;
+        }
+      }
+
       return tx;
     } catch (error) {
       console.error('Failed to reject bank transfer:', error);

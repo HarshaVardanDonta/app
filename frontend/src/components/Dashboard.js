@@ -14,6 +14,7 @@ const Dashboard = () => {
   // Calculate stats
   const totalBanks = banks.length;
   const pendingRequestsCount = pendingRequests.length;
+  const actualPendingRequestsCount = pendingRequests.filter(req => req.approved === false).length;
   const totalTransfers = transferHistory.length;
   const totalMintedSupply = banks.reduce((sum, bank) => sum + parseInt(bank.mintedSupply || 0), 0);
 
@@ -135,7 +136,7 @@ const Dashboard = () => {
             {isOwner ? <Crown className="h-4 w-4 text-orange-500" /> : <Users className="h-4 w-4 text-orange-500" />}
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-gray-900">{pendingRequestsCount}</div>
+            <div className="text-2xl font-bold text-gray-900">{actualPendingRequestsCount}</div>
             <p className="text-xs text-gray-500 mt-1">
               {isOwner ? 'Awaiting approval' : 'Under review'}
             </p>
@@ -247,7 +248,7 @@ const Dashboard = () => {
               <div className="p-4 border rounded-lg hover:bg-gray-50 cursor-pointer transition-colors">
                 <h4 className="font-medium text-gray-900 mb-2">Pending Requests</h4>
                 <p className="text-sm text-gray-600 mb-3">Review and approve bank creation requests</p>
-                <Badge variant="outline">{pendingRequestsCount} pending</Badge>
+                <Badge variant="outline">{actualPendingRequestsCount} pending</Badge>
               </div>
               <div className="p-4 border rounded-lg hover:bg-gray-50 cursor-pointer transition-colors">
                 <h4 className="font-medium text-gray-900 mb-2">Mint Coins</h4>

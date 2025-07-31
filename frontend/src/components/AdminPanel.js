@@ -8,13 +8,13 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from './ui/tabs';
 import { useToast } from '../hooks/use-toast';
 import { useWallet } from '../contexts/WalletContext';
 import { useBlockchainData } from '../hooks/useBlockchainData';
-import { 
-  Crown, 
-  Building2, 
-  CheckCircle, 
-  XCircle, 
+import {
+  Crown,
+  Building2,
+  CheckCircle,
+  XCircle,
   Coins,
-  ArrowRightLeft, 
+  ArrowRightLeft,
   Clock,
   Loader2,
   AlertCircle,
@@ -27,6 +27,10 @@ const AdminPanel = () => {
   const { web3Service } = useWallet();
   const { banks, pendingRequests, pendingTransfers, loading, error, refresh } = useBlockchainData();
   const { toast } = useToast();
+
+  // Filter out already approved requests and transfers
+  const actualPendingRequests = pendingRequests.filter(request => !request.approved);
+  const actualPendingTransfers = pendingTransfers.filter(transfer => !transfer.approved);
 
   const handleApproveBank = async (bankId) => {
     setIsLoading(prev => ({ ...prev, [bankId]: true }));
@@ -43,13 +47,19 @@ const AdminPanel = () => {
     } catch (error) {
       console.error('Failed to approve bank:', error);
       let errorMessage = 'Failed to approve bank. Please try again.';
-      
+
       if (error.message.includes('user rejected')) {
         errorMessage = 'Transaction was rejected by user';
       } else if (error.message.includes('insufficient funds')) {
         errorMessage = 'Insufficient ETH for gas fees';
+      } else if (error.message.includes('rate limit') || error.code === -32005 || error.message.includes('could not coalesce error')) {
+        errorMessage = 'Network is congested. The transaction may still succeed. Please wait a moment and check if it was processed.';
+      } else if (error.message.includes('network')) {
+        errorMessage = 'Network error. Please check your connection and try again';
+      } else if (error.message.includes('revert')) {
+        errorMessage = 'Transaction failed: ' + (error.reason || 'Smart contract rejected the transaction');
       }
-      
+
       toast({
         title: "Transaction Failed",
         description: errorMessage,
@@ -86,13 +96,19 @@ const AdminPanel = () => {
     } catch (error) {
       console.error('Failed to mint coins:', error);
       let errorMessage = 'Failed to mint coins. Please try again.';
-      
+
       if (error.message.includes('user rejected')) {
         errorMessage = 'Transaction was rejected by user';
       } else if (error.message.includes('insufficient funds')) {
         errorMessage = 'Insufficient ETH for gas fees';
+      } else if (error.message.includes('rate limit') || error.code === -32005 || error.message.includes('could not coalesce error')) {
+        errorMessage = 'Network is congested. The transaction may still succeed. Please wait a moment and check if it was processed.';
+      } else if (error.message.includes('network')) {
+        errorMessage = 'Network error. Please check your connection and try again';
+      } else if (error.message.includes('revert')) {
+        errorMessage = 'Transaction failed: ' + (error.reason || 'Smart contract rejected the transaction');
       }
-      
+
       toast({
         title: "Transaction Failed",
         description: errorMessage,
@@ -118,11 +134,19 @@ const AdminPanel = () => {
     } catch (error) {
       console.error('Failed to approve transfer:', error);
       let errorMessage = 'Failed to approve transfer. Please try again.';
-      
+
       if (error.message.includes('user rejected')) {
         errorMessage = 'Transaction was rejected by user';
+      } else if (error.message.includes('insufficient funds')) {
+        errorMessage = 'Insufficient ETH for gas fees';
+      } else if (error.message.includes('rate limit') || error.code === -32005 || error.message.includes('could not coalesce error')) {
+        errorMessage = 'Network is congested. The transaction may still succeed. Please wait a moment and check if it was processed.';
+      } else if (error.message.includes('network')) {
+        errorMessage = 'Network error. Please check your connection and try again';
+      } else if (error.message.includes('revert')) {
+        errorMessage = 'Transaction failed: ' + (error.reason || 'Smart contract rejected the transaction');
       }
-      
+
       toast({
         title: "Transaction Failed",
         description: errorMessage,
@@ -148,9 +172,23 @@ const AdminPanel = () => {
       }, 3000);
     } catch (error) {
       console.error('Failed to reject transfer:', error);
+      let errorMessage = 'Failed to reject transfer. Please try again.';
+
+      if (error.message.includes('user rejected')) {
+        errorMessage = 'Transaction was rejected by user';
+      } else if (error.message.includes('insufficient funds')) {
+        errorMessage = 'Insufficient ETH for gas fees';
+      } else if (error.message.includes('rate limit') || error.code === -32005 || error.message.includes('could not coalesce error')) {
+        errorMessage = 'Network is congested. The transaction may still succeed. Please wait a moment and check if it was processed.';
+      } else if (error.message.includes('network')) {
+        errorMessage = 'Network error. Please check your connection and try again';
+      } else if (error.message.includes('revert')) {
+        errorMessage = 'Transaction failed: ' + (error.reason || 'Smart contract rejected the transaction');
+      }
+
       toast({
         title: "Transaction Failed",
-        description: "Failed to reject transfer. Please try again.",
+        description: errorMessage,
         variant: "destructive"
       });
     } finally {
@@ -213,13 +251,13 @@ const AdminPanel = () => {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm text-gray-600">Pending Requests</p>
-                <p className="text-2xl font-bold text-orange-700">{pendingRequests.length}</p>
+                <p className="text-2xl font-bold text-orange-700">{actualPendingRequests.length}</p>
               </div>
               <Clock className="w-8 h-8 text-orange-500" />
             </div>
           </CardContent>
         </Card>
-        
+
         <Card className="border-l-4 border-l-blue-500">
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
@@ -231,19 +269,19 @@ const AdminPanel = () => {
             </div>
           </CardContent>
         </Card>
-        
+
         <Card className="border-l-4 border-l-purple-500">
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm text-gray-600">Pending Transfers</p>
-                <p className="text-2xl font-bold text-purple-700">{pendingTransfers.length}</p>
+                <p className="text-2xl font-bold text-purple-700">{actualPendingTransfers.length}</p>
               </div>
               <ArrowRightLeft className="w-8 h-8 text-purple-500" />
             </div>
           </CardContent>
         </Card>
-        
+
         <Card className="border-l-4 border-l-green-500">
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
@@ -266,7 +304,7 @@ const AdminPanel = () => {
           <TabsTrigger value="minting">Coin Minting</TabsTrigger>
           <TabsTrigger value="transfers">Transfer Management</TabsTrigger>
         </TabsList>
-        
+
         {/* Bank Requests Tab */}
         <TabsContent value="requests" className="space-y-4">
           <Card>
@@ -281,7 +319,7 @@ const AdminPanel = () => {
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
-                {pendingRequests.map((request) => (
+                {actualPendingRequests.map((request) => (
                   <div key={request.generatedId} className="border rounded-lg p-4">
                     <div className="flex items-center justify-between">
                       <div className="space-y-2">
@@ -316,7 +354,7 @@ const AdminPanel = () => {
                     </div>
                   </div>
                 ))}
-                {pendingRequests.length === 0 && (
+                {actualPendingRequests.length === 0 && (
                   <div className="text-center py-8 text-gray-500">
                     <Building2 className="w-12 h-12 mx-auto mb-4 text-gray-400" />
                     <p>No pending bank requests</p>
@@ -421,7 +459,7 @@ const AdminPanel = () => {
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
-                {pendingTransfers.map((transfer) => (
+                {actualPendingTransfers.map((transfer) => (
                   <div key={transfer.transferId} className="border rounded-lg p-4">
                     <div className="flex items-center justify-between">
                       <div className="space-y-2">
@@ -468,7 +506,7 @@ const AdminPanel = () => {
                     </div>
                   </div>
                 ))}
-                {pendingTransfers.length === 0 && (
+                {actualPendingTransfers.length === 0 && (
                   <div className="text-center py-8 text-gray-500">
                     <ArrowRightLeft className="w-12 h-12 mx-auto mb-4 text-gray-400" />
                     <p>No pending transfers</p>
