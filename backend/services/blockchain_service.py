@@ -178,7 +178,9 @@ class BlockchainService:
             for bank_id in bank_ids:
                 try:
                     transfers = self.get_pending_transfers(bank_id)
-                    all_transfers.extend(transfers)
+                    # Filter to only include truly pending transfers (not approved)
+                    pending_only = [t for t in transfers if not t['approved']]
+                    all_transfers.extend(pending_only)
                 except Exception as e:
                     logger.warning(f"Failed to get pending transfers for {bank_id}: {e}")
                     continue
@@ -199,7 +201,8 @@ class BlockchainService:
                 try:
                     transfers = self.get_transfer_history(bank_id)
                     for transfer in transfers:
-                        if transfer['transferId'] not in transfer_ids:
+                        # Only include approved transfers in history and avoid duplicates
+                        if transfer['approved'] and transfer['transferId'] not in transfer_ids:
                             transfer_ids.add(transfer['transferId'])
                             all_transfers.append(transfer)
                 except Exception as e:

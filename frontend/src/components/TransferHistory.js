@@ -24,11 +24,32 @@ const TransferHistory = () => {
     }, 2000);
   };
 
-  // Combine pending and completed transfers
-  const allTransfers = [
-    ...pendingTransfers.map(t => ({ ...t, status: 'pending' })),
-    ...transferHistory.map(t => ({ ...t, status: 'completed' }))
-  ].sort((a, b) => b.timestamp - a.timestamp);
+  // Combine pending and completed transfers, avoiding duplicates
+  const allTransfers = React.useMemo(() => {
+    // Create a map to store unique transfers by transferId
+    const transferMap = new Map();
+
+    // First, add all completed transfers (they take priority)
+    transferHistory.forEach(transfer => {
+      transferMap.set(transfer.transferId, {
+        ...transfer,
+        status: transfer.approved ? 'completed' : 'pending'
+      });
+    });
+
+    // Then add pending transfers only if they don't already exist
+    pendingTransfers.forEach(transfer => {
+      if (!transferMap.has(transfer.transferId)) {
+        transferMap.set(transfer.transferId, {
+          ...transfer,
+          status: transfer.approved ? 'completed' : 'pending'
+        });
+      }
+    });
+
+    // Convert map to array and sort by timestamp
+    return Array.from(transferMap.values()).sort((a, b) => b.timestamp - a.timestamp);
+  }, [pendingTransfers, transferHistory]);
 
   const filteredTransfers = allTransfers.filter(transfer => {
     const matchesSearch =
