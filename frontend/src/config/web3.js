@@ -1,9 +1,9 @@
 import { ethers } from 'ethers';
 
 // Contract Configuration
-export const CONTRACT_ADDRESS = '0x9B6Bb00Ec24800C9Ccf4F3A1063df037Eb22C845';
+export const CONTRACT_ADDRESS = '0x88999cCdC8F70081D56890ea63830a9A40220C28';
 export const SEPOLIA_CHAIN_ID = '0xaa36a7'; // 11155111 in hex
-export const RPC_URL = 'https://sepolia.infura.io/v3/1871d13fa53c4b9591f45af89704788b';
+export const RPC_URL = 'https://sepolia.infura.io/v3/7628798c8a6c4c77b34c7a34f218f403';
 
 // Contract ABI
 export const CONTRACT_ABI = [

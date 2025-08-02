@@ -2,12 +2,31 @@ import os
 from web3 import Web3
 
 # Contract Configuration
-CONTRACT_ADDRESS = '0x9B6Bb00Ec24800C9Ccf4F3A1063df037Eb22C845'
-RPC_URL = 'https://sepolia.infura.io/v3/1871d13fa53c4b9591f45af89704788b'
+CONTRACT_ADDRESS = '0x88999cCdC8F70081D56890ea63830a9A40220C28'
+# default RPC URL
+RPC_URL = 'https://sepolia.infura.io/v3/7628798c8a6c4c77b34c7a34f218f403'
 SEPOLIA_CHAIN_ID = 11155111
 
 # Contract ABI
 CONTRACT_ABI = [
+	{
+		"inputs": [
+			{
+				"internalType": "string",
+				"name": "bankId",
+				"type": "string"
+			},
+			{
+				"internalType": "string",
+				"name": "transferId",
+				"type": "string"
+			}
+		],
+		"name": "approveBankToBankTransfer",
+		"outputs": [],
+		"stateMutability": "nonpayable",
+		"type": "function"
+	},
 	{
 		"inputs": [],
 		"stateMutability": "nonpayable",
@@ -125,6 +144,37 @@ CONTRACT_ABI = [
 		"type": "event"
 	},
 	{
+		"inputs": [
+			{
+				"internalType": "string",
+				"name": "inputId",
+				"type": "string"
+			}
+		],
+		"name": "generateBank",
+		"outputs": [],
+		"stateMutability": "nonpayable",
+		"type": "function"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "string",
+				"name": "bankId",
+				"type": "string"
+			},
+			{
+				"internalType": "uint256",
+				"name": "amount",
+				"type": "uint256"
+			}
+		],
+		"name": "mintCoins",
+		"outputs": [],
+		"stateMutability": "nonpayable",
+		"type": "function"
+	},
+	{
 		"anonymous": False,
 		"inputs": [
 			{
@@ -187,7 +237,78 @@ CONTRACT_ABI = [
 				"type": "string"
 			}
 		],
-		"name": "approveBankToBankTransfer",
+		"name": "rejectBankToBankTransfer",
+		"outputs": [],
+		"stateMutability": "nonpayable",
+		"type": "function"
+	},
+	{
+		"inputs": [],
+		"name": "renounceOwnership",
+		"outputs": [],
+		"stateMutability": "nonpayable",
+		"type": "function"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "string",
+				"name": "_bankName",
+				"type": "string"
+			},
+			{
+				"internalType": "string",
+				"name": "_currencyName",
+				"type": "string"
+			},
+			{
+				"internalType": "string",
+				"name": "_currencySymbol",
+				"type": "string"
+			},
+			{
+				"internalType": "uint256",
+				"name": "_currencyValue",
+				"type": "uint256"
+			}
+		],
+		"name": "requestBank",
+		"outputs": [],
+		"stateMutability": "nonpayable",
+		"type": "function"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "string",
+				"name": "fromBankId",
+				"type": "string"
+			},
+			{
+				"internalType": "string",
+				"name": "toBankId",
+				"type": "string"
+			},
+			{
+				"internalType": "uint256",
+				"name": "amount",
+				"type": "uint256"
+			}
+		],
+		"name": "requestBankToBankTransfer",
+		"outputs": [],
+		"stateMutability": "nonpayable",
+		"type": "function"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "address",
+				"name": "newOwner",
+				"type": "address"
+			}
+		],
+		"name": "transferOwnership",
 		"outputs": [],
 		"stateMutability": "nonpayable",
 		"type": "function"
@@ -206,79 +327,6 @@ CONTRACT_ABI = [
 				"internalType": "string",
 				"name": "",
 				"type": "string"
-			}
-		],
-		"stateMutability": "view",
-		"type": "function"
-	},
-	{
-		"inputs": [
-			{
-				"internalType": "string",
-				"name": "",
-				"type": "string"
-			}
-		],
-		"name": "bankSerialCounter",
-		"outputs": [
-			{
-				"internalType": "uint256",
-				"name": "",
-				"type": "uint256"
-			}
-		],
-		"stateMutability": "view",
-		"type": "function"
-	},
-	{
-		"inputs": [
-			{
-				"internalType": "string",
-				"name": "",
-				"type": "string"
-			},
-			{
-				"internalType": "uint256",
-				"name": "",
-				"type": "uint256"
-			}
-		],
-		"name": "bankTransferHistory",
-		"outputs": [
-			{
-				"internalType": "string",
-				"name": "transferId",
-				"type": "string"
-			},
-			{
-				"internalType": "string",
-				"name": "fromBankId",
-				"type": "string"
-			},
-			{
-				"internalType": "string",
-				"name": "toBankId",
-				"type": "string"
-			},
-			{
-				"internalType": "uint256",
-				"name": "amount",
-				"type": "uint256"
-			},
-			{
-				"internalType": "string",
-				"name": "currencyName",
-				"type": "string"
-			},
-			{
-				"internalType": "uint256",
-				"name": "timestamp",
-				"type": "uint256"
-			},
-			{
-				"internalType": "bool",
-				"name": "approved",
-				"type": "bool"
 			}
 		],
 		"stateMutability": "view",
@@ -357,13 +405,73 @@ CONTRACT_ABI = [
 		"inputs": [
 			{
 				"internalType": "string",
-				"name": "inputId",
+				"name": "",
 				"type": "string"
 			}
 		],
-		"name": "generateBank",
-		"outputs": [],
-		"stateMutability": "nonpayable",
+		"name": "bankSerialCounter",
+		"outputs": [
+			{
+				"internalType": "uint256",
+				"name": "",
+				"type": "uint256"
+			}
+		],
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "string",
+				"name": "",
+				"type": "string"
+			},
+			{
+				"internalType": "uint256",
+				"name": "",
+				"type": "uint256"
+			}
+		],
+		"name": "bankTransferHistory",
+		"outputs": [
+			{
+				"internalType": "string",
+				"name": "transferId",
+				"type": "string"
+			},
+			{
+				"internalType": "string",
+				"name": "fromBankId",
+				"type": "string"
+			},
+			{
+				"internalType": "string",
+				"name": "toBankId",
+				"type": "string"
+			},
+			{
+				"internalType": "uint256",
+				"name": "amount",
+				"type": "uint256"
+			},
+			{
+				"internalType": "string",
+				"name": "currencyName",
+				"type": "string"
+			},
+			{
+				"internalType": "uint256",
+				"name": "timestamp",
+				"type": "uint256"
+			},
+			{
+				"internalType": "bool",
+				"name": "approved",
+				"type": "bool"
+			}
+		],
+		"stateMutability": "view",
 		"type": "function"
 	},
 	{
@@ -470,24 +578,6 @@ CONTRACT_ABI = [
 			}
 		],
 		"stateMutability": "view",
-		"type": "function"
-	},
-	{
-		"inputs": [
-			{
-				"internalType": "string",
-				"name": "bankId",
-				"type": "string"
-			},
-			{
-				"internalType": "uint256",
-				"name": "amount",
-				"type": "uint256"
-			}
-		],
-		"name": "mintCoins",
-		"outputs": [],
-		"stateMutability": "nonpayable",
 		"type": "function"
 	},
 	{
@@ -604,95 +694,6 @@ CONTRACT_ABI = [
 			}
 		],
 		"stateMutability": "view",
-		"type": "function"
-	},
-	{
-		"inputs": [
-			{
-				"internalType": "string",
-				"name": "bankId",
-				"type": "string"
-			},
-			{
-				"internalType": "string",
-				"name": "transferId",
-				"type": "string"
-			}
-		],
-		"name": "rejectBankToBankTransfer",
-		"outputs": [],
-		"stateMutability": "nonpayable",
-		"type": "function"
-	},
-	{
-		"inputs": [],
-		"name": "renounceOwnership",
-		"outputs": [],
-		"stateMutability": "nonpayable",
-		"type": "function"
-	},
-	{
-		"inputs": [
-			{
-				"internalType": "string",
-				"name": "_bankName",
-				"type": "string"
-			},
-			{
-				"internalType": "string",
-				"name": "_currencyName",
-				"type": "string"
-			},
-			{
-				"internalType": "string",
-				"name": "_currencySymbol",
-				"type": "string"
-			},
-			{
-				"internalType": "uint256",
-				"name": "_currencyValue",
-				"type": "uint256"
-			}
-		],
-		"name": "requestBank",
-		"outputs": [],
-		"stateMutability": "nonpayable",
-		"type": "function"
-	},
-	{
-		"inputs": [
-			{
-				"internalType": "string",
-				"name": "fromBankId",
-				"type": "string"
-			},
-			{
-				"internalType": "string",
-				"name": "toBankId",
-				"type": "string"
-			},
-			{
-				"internalType": "uint256",
-				"name": "amount",
-				"type": "uint256"
-			}
-		],
-		"name": "requestBankToBankTransfer",
-		"outputs": [],
-		"stateMutability": "nonpayable",
-		"type": "function"
-	},
-	{
-		"inputs": [
-			{
-				"internalType": "address",
-				"name": "newOwner",
-				"type": "address"
-			}
-		],
-		"name": "transferOwnership",
-		"outputs": [],
-		"stateMutability": "nonpayable",
 		"type": "function"
 	},
 	{
